@@ -7,6 +7,7 @@ import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -16,6 +17,9 @@ public interface FileRepository extends MongoRepository<File, ObjectId> {
 
     @Query(value = "{'id':?0}")
     Optional<File> getFileById(ObjectId id);
+
+    @Query(value = "{'email': ?0}")
+    List<File> findAllByEmail(String email);
 
 
 }

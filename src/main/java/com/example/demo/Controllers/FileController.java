@@ -1,6 +1,7 @@
 package com.example.demo.Controllers;
 
 import com.example.demo.Models.File;
+import com.example.demo.Models.FrontendFile;
 import com.example.demo.Models.User;
 import com.example.demo.Services.FileService;
 import com.example.demo.Services.UserService;
@@ -22,10 +23,12 @@ import javax.print.attribute.standard.Media;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.sql.Array;
 import java.util.*;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+
 @RestController
+@CrossOrigin(origins = "*")
 @RequestMapping("/api/v1/files")
 public class FileController {
     @Autowired
@@ -35,6 +38,11 @@ public class FileController {
 
     @Autowired
     UserService userService;
+
+    @GetMapping("/test")
+    public ResponseEntity test(){
+        return new ResponseEntity("hello", HttpStatus.OK);
+    }
 
     @GetMapping("/{name}")
     public ResponseEntity<File> getFileByName(@PathVariable(value="name") String name){
@@ -77,28 +85,30 @@ public class FileController {
     }
 
     @PostMapping("/all")
-    public ResponseEntity<List<File>> getFilesByUser(@RequestParam("files") List<ObjectId> ids){
-             List<File> userFiles = new ArrayList<>();
+    public ResponseEntity<List<FrontendFile>> getFilesByUser(@RequestParam("email") String email){
+            System.out.println(email);
 
-            for(ObjectId fileId : ids){
-                Optional<File> file = fileService.getById(fileId);
-                userFiles.add(file.get());
+            List<File> userFiles = fileService.getAllByEmail(email);
+            List<FrontendFile> frontendUserFiles = new ArrayList<>();
+
+            for(int i = 0; i < userFiles.size(); i++)
+            {
+                FrontendFile file = new FrontendFile(userFiles.get(i));
+                frontendUserFiles.add(file);
             }
 
-            return new ResponseEntity<>(userFiles, HttpStatus.OK);
-
+            return new ResponseEntity<>(frontendUserFiles, HttpStatus.OK);
 
     }
 
 
 
     @PostMapping("/add")
-    public ResponseEntity<ObjectId> addFile(@RequestParam("title") String title, @RequestParam("file") MultipartFile file, Model model, @RequestParam("id") ObjectId userId) throws IOException {
+    public ResponseEntity<ObjectId> addFile(@RequestParam("title") String title, @RequestParam("file") MultipartFile file, Model model, @RequestParam("id") String email) throws IOException {
         String contentType = file.getContentType();
-        Optional<User> user = userService.findUserById(userId);
         String type = "";
 
-        if(user.isEmpty()) return new ResponseEntity<>(HttpStatus.CONFLICT);
+        if(email.isBlank()) return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
 
         if(contentType != null){
             type = contentType.substring(contentType.lastIndexOf('/') + 1);
@@ -108,24 +118,18 @@ public class FileController {
         }
 
 
-        ObjectId id = fileService.addFile(title, type, file);
-        user.get().addFile(id.toString());
-        userService.saveUser(user.get());
+        ObjectId id = fileService.addFile(title, type, file, email);
         return new ResponseEntity<ObjectId>(id, HttpStatus.CREATED);
     }
 
-    @DeleteMapping("/{userId}/{fileId}")
-    public ResponseEntity<?> deleteFile(@PathVariable("fileId")String id, @PathVariable("userId") String userId){
+    @DeleteMapping("/{fileId}")
+    public ResponseEntity<?> deleteFile(@PathVariable("fileId")String id){
         ObjectId objectId = new ObjectId(id);
-        ObjectId userObjectId = new ObjectId(userId);
         Optional<File>existingFile = fileService.getById(objectId);
-        Optional<User>existingUser = userService.findUserById(userObjectId);
 
-        if(existingFile.isEmpty() || existingUser.isEmpty()) return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        if(existingFile.isEmpty()) return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         else{
             fileService.deleteById(objectId);
-            existingUser.get().removeFile(id);
-            userService.saveUser(existingUser.get());
             return new ResponseEntity<>(HttpStatus.OK);
         }
     }

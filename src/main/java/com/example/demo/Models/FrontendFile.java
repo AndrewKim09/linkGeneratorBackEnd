@@ -12,13 +12,16 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.web.multipart.MultipartFile;
 
-@Document(collection = "Links")
+import java.sql.Timestamp;
+import java.util.Date;
+
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class File {
+public class FrontendFile {
     @Id
-    private ObjectId id;
+    private String id;
 
     private String title;
 
@@ -26,9 +29,22 @@ public class File {
 
     private String type;
     private String email;
+    private Date date;
 
-    public File(String title) {
+    public FrontendFile(String title) {
         this.title = title;
     }
+
+    public FrontendFile(File file)
+    {
+        this.id = file.getId().toHexString();
+        this.title = file.getTitle();
+        this.file = file.getFile();
+        this.type = file.getType();
+        this.email = file.getEmail();
+        this.date = file.getId().getDate();
+    }
+
+
 
 }
